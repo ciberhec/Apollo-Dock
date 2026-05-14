@@ -1,0 +1,11 @@
+{
+  "tools": [
+    {
+      "id": "domain-agent",
+      "name": "Domain Agent",
+      "icon": "🌐",
+      "description": "DNS authentication & email deliverability checker",
+      "entry": "tools/domain-agent/index.html"
+    }
+  ]
+}

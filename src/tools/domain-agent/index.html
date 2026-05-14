@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Domain Agent — Apollo Dock</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-glyph">🌐</span>
+      <div>
+        <div class="brand-title">Domain Agent</div>
+        <div class="brand-sub">Email authentication & deliverability checker</div>
+      </div>
+    </div>
+  </header>
+
+  <section class="input-row">
+    <input
+      id="domainInput"
+      type="text"
+      placeholder="company.com"
+      autocomplete="off"
+      spellcheck="false"
+    />
+    <button id="runBtn" class="btn primary">Run Analysis</button>
+    <button id="claudeBtn" class="btn ghost" disabled title="Coming soon — requires Anthropic API key">
+      ✨ Analyze with Claude
+    </button>
+  </section>
+
+  <section id="status" class="status hidden"></section>
+
+  <main id="report" class="report hidden">
+    <section class="report-section">
+      <h2 class="section-title">Status Summary</h2>
+      <div id="summaryGrid" class="summary-grid"></div>
+    </section>
+
+    <section class="report-section">
+      <h2 class="section-title">Step-by-step Fix Guide</h2>
+      <div id="fixGuide" class="fix-guide"></div>
+    </section>
+
+    <section class="report-section subtle">
+      <h2 class="section-title">Customer-Ready Message</h2>
+      <div class="copyable-wrap">
+        <button id="copyMsgBtn" class="btn small">Copy to clipboard</button>
+        <pre id="customerMessage" class="copyable"></pre>
+      </div>
+    </section>
+  </main>
+
+  <script src="renderer.js"></script>
+</body>
+</html>
