@@ -50,8 +50,8 @@ body.theme-dark {
 /* ============ BUBBLE MODE ============ */
 .bubble {
   position: fixed;
-  top: 16px;
-  left: 16px;
+  top: 0;
+  left: 0;
   display: block;
   -webkit-app-region: no-drag;
 }
@@ -67,7 +67,7 @@ body.theme-dark {
   justify-content: center;
   cursor: grab;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 217, 77, 0.2);
-  -webkit-app-region: drag;
+  -webkit-app-region: no-drag;
   transition: transform 0.15s ease, background 0.15s ease;
 }
 
@@ -82,14 +82,14 @@ body.theme-dark {
 
 .bubble-panel {
   position: fixed;
-  top: 16px;
-  left: 84px;
+  top: 0;
+  left: 68px;
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 14px;
   width: 240px;
   max-width: 240px;
-  max-height: 80vh;
+  max-height: 100vh;
   overflow-y: auto;
   padding: 10px 12px 12px;
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
@@ -216,11 +216,12 @@ body.theme-dark {
 /* ============ SETTINGS ============ */
 .settings {
   position: fixed;
-  top: 16px;
-  left: 16px;
-  width: 280px;
-  max-width: calc(100vw - 32px);
-  max-height: calc(100vh - 32px);
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
   overflow-y: auto;
   background: var(--bg);
   border: 1px solid var(--border);

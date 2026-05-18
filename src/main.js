@@ -46,28 +46,33 @@ let tray = null;
 const toolWindows = new Map();
 let settings = { ...DEFAULT_SETTINGS };
 let menuOpen = false;
-let bubbleHovered = false;
+let preMenuPosition = null;
 
 function updateClickThrough() {
   if (!dockWindow) return;
-  if (settings.mode !== 'bubble') {
-    dockWindow.setIgnoreMouseEvents(false);
-    return;
-  }
-  if (menuOpen || bubbleHovered) {
-    dockWindow.setIgnoreMouseEvents(false);
-  } else {
-    dockWindow.setIgnoreMouseEvents(true, { forward: true });
-  }
+  dockWindow.setIgnoreMouseEvents(false);
 }
 
-function getDockDimensions(mode) {
+function getDockDimensions(mode, isMenuOpen) {
   if (mode === 'sidebar') return { width: 220, height: 560 };
-  return { width: 360, height: 480 };
+  if (isMenuOpen) return { width: 356, height: 480 };
+  return { width: 56, height: 56 };
+}
+
+function clampToWorkArea(x, y, width, height) {
+  const display = screen.getDisplayNearestPoint({ x, y });
+  const wa = display.workArea;
+  let nx = x;
+  let ny = y;
+  if (nx + width > wa.x + wa.width) nx = wa.x + wa.width - width;
+  if (ny + height > wa.y + wa.height) ny = wa.y + wa.height - height;
+  if (nx < wa.x) nx = wa.x;
+  if (ny < wa.y) ny = wa.y;
+  return { x: nx, y: ny };
 }
 
 function createDockWindow() {
-  const { width, height } = getDockDimensions(settings.mode);
+  const { width, height } = getDockDimensions(settings.mode, menuOpen);
   const display = screen.getPrimaryDisplay().workAreaSize;
 
   const x = settings.position?.x ?? display.width - width - 24;
@@ -114,9 +119,25 @@ function createDockWindow() {
 
 function resizeDockForMode(mode) {
   if (!dockWindow) return;
-  const { width, height } = getDockDimensions(mode);
+  const { width, height } = getDockDimensions(mode, menuOpen);
   const bounds = dockWindow.getBounds();
   dockWindow.setBounds({ x: bounds.x, y: bounds.y, width, height });
+}
+
+function applyMenuOpenSize(open) {
+  if (!dockWindow || settings.mode !== 'bubble') return;
+  const { width, height } = getDockDimensions('bubble', open);
+  const bounds = dockWindow.getBounds();
+
+  if (open) {
+    preMenuPosition = { x: bounds.x, y: bounds.y };
+    const clamped = clampToWorkArea(bounds.x, bounds.y, width, height);
+    dockWindow.setBounds({ x: clamped.x, y: clamped.y, width, height });
+  } else {
+    const anchor = preMenuPosition || { x: bounds.x, y: bounds.y };
+    preMenuPosition = null;
+    dockWindow.setBounds({ x: anchor.x, y: anchor.y, width, height });
+  }
 }
 
 function openTool(toolId) {
@@ -214,9 +235,9 @@ ipcMain.handle('settings:update', (_evt, partial) => {
   if (dockWindow) {
     if (typeof partial.opacity === 'number') dockWindow.setOpacity(partial.opacity);
     if (partial.mode) {
-      resizeDockForMode(partial.mode);
       menuOpen = false;
-      bubbleHovered = false;
+      preMenuPosition = null;
+      resizeDockForMode(partial.mode);
       updateClickThrough();
     }
   }
@@ -227,36 +248,28 @@ ipcMain.on('dock:hide', () => dockWindow?.hide());
 ipcMain.on('dock:quit', () => app.quit());
 ipcMain.on('dock:open-external', (_evt, url) => { if (url) shell.openExternal(url); });
 
-ipcMain.handle('get-screen-info', () => {
-  if (!dockWindow) return null;
-  const bounds = dockWindow.getBounds();
-  const display = screen.getDisplayNearestPoint({ x: bounds.x, y: bounds.y });
-  return {
-    workArea: display.workArea,
-    windowBounds: bounds
-  };
+ipcMain.on('dock:drag-by', (_evt, delta) => {
+  if (!dockWindow || !delta) return;
+  const dx = Number.isFinite(delta.dx) ? Math.round(delta.dx) : 0;
+  const dy = Number.isFinite(delta.dy) ? Math.round(delta.dy) : 0;
+  if (dx === 0 && dy === 0) return;
+  const [x, y] = dockWindow.getPosition();
+  dockWindow.setPosition(x + dx, y + dy);
+  if (preMenuPosition) {
+    preMenuPosition.x += dx;
+    preMenuPosition.y += dy;
+  }
 });
 
-ipcMain.on('dock:move-window', (_evt, pos) => {
-  if (!dockWindow || !pos) return;
-  const bounds = dockWindow.getBounds();
-  const x = Number.isFinite(pos.x) ? Math.round(pos.x) : bounds.x;
-  const y = Number.isFinite(pos.y) ? Math.round(pos.y) : bounds.y;
-  dockWindow.setBounds({ x, y, width: bounds.width, height: bounds.height });
-});
-
-ipcMain.on('menu-hidden', () => {
+ipcMain.handle('menu-hidden', () => {
   menuOpen = false;
+  applyMenuOpenSize(false);
   updateClickThrough();
 });
 
-ipcMain.on('menu-shown', () => {
+ipcMain.handle('menu-shown', () => {
   menuOpen = true;
-  updateClickThrough();
-});
-
-ipcMain.on('bubble-hover', (_evt, hovered) => {
-  bubbleHovered = Boolean(hovered);
+  applyMenuOpenSize(true);
   updateClickThrough();
 });
 

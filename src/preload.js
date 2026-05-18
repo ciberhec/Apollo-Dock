@@ -9,11 +9,9 @@ contextBridge.exposeInMainWorld('apolloDock', {
   quit: () => ipcRenderer.send('dock:quit'),
   openExternal: (url) => ipcRenderer.send('dock:open-external', url),
   onOpenSettings: (cb) => ipcRenderer.on('open-settings', cb),
-  getScreenInfo: () => ipcRenderer.invoke('get-screen-info'),
-  moveWindow: (pos) => ipcRenderer.send('dock:move-window', pos),
-  menuHidden: () => ipcRenderer.send('menu-hidden'),
-  menuShown: () => ipcRenderer.send('menu-shown'),
-  bubbleHover: (hovered) => ipcRenderer.send('bubble-hover', hovered)
+  dragWindowBy: (delta) => ipcRenderer.send('dock:drag-by', delta),
+  menuHidden: () => ipcRenderer.invoke('menu-hidden'),
+  menuShown: () => ipcRenderer.invoke('menu-shown')
 });
 
 contextBridge.exposeInMainWorld('domainAgent', {

@@ -21,17 +21,13 @@ const els = {
   quitBtn: document.getElementById('quitBtn')
 };
 
-const LAYOUT = {
-  bubbleSize: 56,
-  bubbleMargin: 16,
-  panelWidth: 240,
-  panelGap: 12,
-  panelMaxHeight: 0.8
-};
+const DRAG_THRESHOLD = 3;
+const CLICK_SUPPRESS_MS = 200;
 
 let state = { mode: 'bubble', opacity: 1, theme: 'dark' };
 let registry = { tools: [] };
-let lastHoverState = null;
+let drag = null;
+let suppressClickUntil = 0;
 
 function applyTheme(theme) {
   els.body.classList.remove('theme-dark', 'theme-light', 'theme-apollo');
@@ -43,21 +39,9 @@ function applyMode(mode) {
   els.body.classList.add(`mode-${mode}`);
   els.bubble.hidden = mode !== 'bubble';
   els.sidebar.hidden = mode !== 'sidebar';
-  closeBubbleMenu();
-  closeSettings();
-  reflowAfterModeChange();
+  els.bubblePanel.hidden = true;
+  els.settings.hidden = true;
   pushClickThroughState();
-}
-
-function reflowAfterModeChange() {
-  void els.body.offsetHeight;
-  els.bubblePanel.style.maxHeight = '80vh';
-  els.bubblePanel.style.overflowY = 'auto';
-  els.bubblePanel.style.maxWidth = `${LAYOUT.panelWidth}px`;
-  els.settings.style.maxHeight = 'calc(100vh - 32px)';
-  els.settings.style.maxWidth = 'calc(100vw - 32px)';
-  els.settings.style.overflowY = 'auto';
-  void els.body.offsetHeight;
 }
 
 function setActiveSeg(group, key, value) {
@@ -85,80 +69,6 @@ function renderTools() {
   });
 }
 
-async function positionBubblePanel() {
-  const info = await api.getScreenInfo();
-  if (!info) return;
-  const { workArea, windowBounds } = info;
-
-  const bubbleScreenLeft = windowBounds.x + LAYOUT.bubbleMargin;
-  const bubbleScreenTop = windowBounds.y + LAYOUT.bubbleMargin;
-  const bubbleScreenRight = bubbleScreenLeft + LAYOUT.bubbleSize;
-
-  const spaceRight = workArea.x + workArea.width - bubbleScreenRight - LAYOUT.panelGap;
-  const spaceLeft = bubbleScreenLeft - workArea.x - LAYOUT.panelGap;
-
-  const panelMaxHeight = Math.floor(workArea.height * LAYOUT.panelMaxHeight);
-  els.bubblePanel.style.maxHeight = `${panelMaxHeight}px`;
-  els.bubblePanel.style.overflowY = 'auto';
-
-  const panelTopInWindow = LAYOUT.bubbleMargin;
-  let panelLeftInWindow = LAYOUT.bubbleMargin + LAYOUT.bubbleSize + LAYOUT.panelGap;
-
-  let newWindowX = windowBounds.x;
-  let newWindowY = windowBounds.y;
-
-  if (spaceRight < LAYOUT.panelWidth && spaceLeft >= LAYOUT.panelWidth) {
-    const shift = LAYOUT.panelWidth - spaceRight + LAYOUT.panelGap;
-    newWindowX = windowBounds.x - shift;
-  } else if (spaceRight < LAYOUT.panelWidth) {
-    const overflowRight = LAYOUT.panelWidth - spaceRight + LAYOUT.panelGap;
-    newWindowX = Math.max(workArea.x, windowBounds.x - overflowRight);
-  }
-
-  const panelScreenTopFinal = newWindowY + panelTopInWindow;
-  const panelScreenBottom = panelScreenTopFinal + panelMaxHeight;
-  const workBottom = workArea.y + workArea.height;
-  if (panelScreenBottom > workBottom) {
-    const overflowBottom = panelScreenBottom - workBottom;
-    newWindowY = Math.max(workArea.y, windowBounds.y - overflowBottom);
-  }
-  if (newWindowY + panelTopInWindow < workArea.y) {
-    newWindowY = workArea.y - panelTopInWindow;
-  }
-
-  if (newWindowX !== windowBounds.x || newWindowY !== windowBounds.y) {
-    api.moveWindow({ x: newWindowX, y: newWindowY });
-  }
-
-  els.bubblePanel.style.left = `${panelLeftInWindow}px`;
-  els.bubblePanel.style.right = 'auto';
-  els.bubblePanel.style.top = `${panelTopInWindow}px`;
-  els.bubblePanel.style.bottom = 'auto';
-}
-
-async function openBubbleMenu() {
-  await positionBubblePanel();
-  els.bubblePanel.hidden = false;
-  api.menuShown();
-}
-
-function closeBubbleMenu() {
-  if (els.bubblePanel.hidden) return;
-  els.bubblePanel.hidden = true;
-  pushClickThroughState();
-}
-
-function openSettings() {
-  els.settings.hidden = false;
-  api.menuShown();
-}
-
-function closeSettings() {
-  if (els.settings.hidden) return;
-  els.settings.hidden = true;
-  pushClickThroughState();
-}
-
 function isMenuOpen() {
   return !els.bubblePanel.hidden || !els.settings.hidden;
 }
@@ -171,43 +81,67 @@ function pushClickThroughState() {
   }
 }
 
-function pointInsideRect(x, y, rect) {
-  return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
+async function openBubbleMenu() {
+  await api.menuShown();
+  els.bubblePanel.hidden = false;
 }
 
-function handleMouseMove(e) {
-  if (state.mode !== 'bubble') {
-    if (lastHoverState !== true) {
-      lastHoverState = true;
-      api.bubbleHover(true);
-    }
-    return;
-  }
-  const inBubble = pointInsideRect(e.clientX, e.clientY, els.bubbleCore.getBoundingClientRect());
-  const inPanel = !els.bubblePanel.hidden && pointInsideRect(e.clientX, e.clientY, els.bubblePanel.getBoundingClientRect());
-  const inSettings = !els.settings.hidden && pointInsideRect(e.clientX, e.clientY, els.settings.getBoundingClientRect());
-  const hovered = inBubble || inPanel || inSettings;
-  if (hovered !== lastHoverState) {
-    lastHoverState = hovered;
-    api.bubbleHover(hovered);
-  }
-}
-
-async function init() {
-  state = await api.getSettings();
-  registry = await api.getRegistry();
-  applyTheme(state.theme);
-  applyMode(state.mode);
-  setActiveSeg(els.modeGroup, 'mode', state.mode);
-  setActiveSeg(els.themeGroup, 'theme', state.theme);
-  els.opacitySlider.value = Math.round(state.opacity * 100);
-  els.opacityValue.textContent = `${els.opacitySlider.value}%`;
-  renderTools();
+function closeBubbleMenu() {
+  if (els.bubblePanel.hidden) return;
+  els.bubblePanel.hidden = true;
   pushClickThroughState();
 }
 
+async function openSettings() {
+  await api.menuShown();
+  els.settings.hidden = false;
+}
+
+function closeSettings() {
+  if (els.settings.hidden) return;
+  els.settings.hidden = true;
+  pushClickThroughState();
+}
+
+els.bubbleCore.addEventListener('pointerdown', (e) => {
+  if (e.button !== 0) return;
+  try { els.bubbleCore.setPointerCapture(e.pointerId); } catch {}
+  drag = {
+    pointerId: e.pointerId,
+    lastScreenX: e.screenX,
+    lastScreenY: e.screenY,
+    moved: false
+  };
+});
+
+els.bubbleCore.addEventListener('pointermove', (e) => {
+  if (!drag || drag.pointerId !== e.pointerId) return;
+  const dx = e.screenX - drag.lastScreenX;
+  const dy = e.screenY - drag.lastScreenY;
+  if (dx === 0 && dy === 0) return;
+  if (!drag.moved && Math.abs(dx) + Math.abs(dy) < DRAG_THRESHOLD) return;
+  drag.moved = true;
+  drag.lastScreenX = e.screenX;
+  drag.lastScreenY = e.screenY;
+  api.dragWindowBy({ dx, dy });
+});
+
+function endDrag(e) {
+  if (!drag || drag.pointerId !== e.pointerId) return;
+  if (drag.moved) suppressClickUntil = Date.now() + CLICK_SUPPRESS_MS;
+  try { els.bubbleCore.releasePointerCapture(drag.pointerId); } catch {}
+  drag = null;
+}
+
+els.bubbleCore.addEventListener('pointerup', endDrag);
+els.bubbleCore.addEventListener('pointercancel', endDrag);
+
 els.bubbleCore.addEventListener('click', async (e) => {
-  if (e.detail === 0) return;
+  if (Date.now() < suppressClickUntil) {
+    e.preventDefault();
+    e.stopPropagation();
+    return;
+  }
   if (els.bubblePanel.hidden) {
     await openBubbleMenu();
   } else {
@@ -221,12 +155,14 @@ els.settingsCloseBtn.addEventListener('click', closeSettings);
 api.onOpenSettings(openSettings);
 
 els.bubbleHideBtn.addEventListener('click', () => {
-  closeBubbleMenu();
-  closeSettings();
+  els.bubblePanel.hidden = true;
+  els.settings.hidden = true;
+  pushClickThroughState();
   api.hideDock();
 });
 els.sidebarHideBtn.addEventListener('click', () => {
-  closeSettings();
+  els.settings.hidden = true;
+  pushClickThroughState();
   api.hideDock();
 });
 els.quitBtn.addEventListener('click', () => api.quit());
@@ -255,12 +191,16 @@ els.opacitySlider.addEventListener('input', async (e) => {
   state = await api.updateSettings({ opacity: pct / 100 });
 });
 
-document.addEventListener('mousemove', handleMouseMove);
-window.addEventListener('blur', () => {
-  if (lastHoverState !== false) {
-    lastHoverState = false;
-    api.bubbleHover(false);
-  }
-});
+async function init() {
+  state = await api.getSettings();
+  registry = await api.getRegistry();
+  applyTheme(state.theme);
+  applyMode(state.mode);
+  setActiveSeg(els.modeGroup, 'mode', state.mode);
+  setActiveSeg(els.themeGroup, 'theme', state.theme);
+  els.opacitySlider.value = Math.round(state.opacity * 100);
+  els.opacityValue.textContent = `${els.opacitySlider.value}%`;
+  renderTools();
+}
 
 init();
