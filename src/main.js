@@ -45,10 +45,25 @@ let dockWindow = null;
 let tray = null;
 const toolWindows = new Map();
 let settings = { ...DEFAULT_SETTINGS };
+let menuOpen = false;
+let bubbleHovered = false;
+
+function updateClickThrough() {
+  if (!dockWindow) return;
+  if (settings.mode !== 'bubble') {
+    dockWindow.setIgnoreMouseEvents(false);
+    return;
+  }
+  if (menuOpen || bubbleHovered) {
+    dockWindow.setIgnoreMouseEvents(false);
+  } else {
+    dockWindow.setIgnoreMouseEvents(true, { forward: true });
+  }
+}
 
 function getDockDimensions(mode) {
   if (mode === 'sidebar') return { width: 220, height: 560 };
-  return { width: 320, height: 420 };
+  return { width: 360, height: 480 };
 }
 
 function createDockWindow() {
@@ -82,6 +97,10 @@ function createDockWindow() {
   dockWindow.setOpacity(settings.opacity);
 
   dockWindow.loadFile(path.join(__dirname, 'dock', 'dock.html'));
+
+  dockWindow.webContents.on('did-finish-load', () => {
+    updateClickThrough();
+  });
 
   dockWindow.on('move', () => {
     if (!dockWindow) return;
@@ -118,7 +137,7 @@ function openTool(toolId) {
     width: 1100,
     height: 760,
     title: tool.name,
-    backgroundColor: '#0f172a',
+    backgroundColor: '#000000',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -194,7 +213,12 @@ ipcMain.handle('settings:update', (_evt, partial) => {
   saveSettings(settings);
   if (dockWindow) {
     if (typeof partial.opacity === 'number') dockWindow.setOpacity(partial.opacity);
-    if (partial.mode) resizeDockForMode(partial.mode);
+    if (partial.mode) {
+      resizeDockForMode(partial.mode);
+      menuOpen = false;
+      bubbleHovered = false;
+      updateClickThrough();
+    }
   }
   return settings;
 });
@@ -202,6 +226,39 @@ ipcMain.on('tool:open', (_evt, toolId) => openTool(toolId));
 ipcMain.on('dock:hide', () => dockWindow?.hide());
 ipcMain.on('dock:quit', () => app.quit());
 ipcMain.on('dock:open-external', (_evt, url) => { if (url) shell.openExternal(url); });
+
+ipcMain.handle('get-screen-info', () => {
+  if (!dockWindow) return null;
+  const bounds = dockWindow.getBounds();
+  const display = screen.getDisplayNearestPoint({ x: bounds.x, y: bounds.y });
+  return {
+    workArea: display.workArea,
+    windowBounds: bounds
+  };
+});
+
+ipcMain.on('dock:move-window', (_evt, pos) => {
+  if (!dockWindow || !pos) return;
+  const bounds = dockWindow.getBounds();
+  const x = Number.isFinite(pos.x) ? Math.round(pos.x) : bounds.x;
+  const y = Number.isFinite(pos.y) ? Math.round(pos.y) : bounds.y;
+  dockWindow.setBounds({ x, y, width: bounds.width, height: bounds.height });
+});
+
+ipcMain.on('menu-hidden', () => {
+  menuOpen = false;
+  updateClickThrough();
+});
+
+ipcMain.on('menu-shown', () => {
+  menuOpen = true;
+  updateClickThrough();
+});
+
+ipcMain.on('bubble-hover', (_evt, hovered) => {
+  bubbleHovered = Boolean(hovered);
+  updateClickThrough();
+});
 
 ipcMain.handle('domain-agent:analyze', async (_evt, rawDomain) => {
   const domain = String(rawDomain || '').trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, '');

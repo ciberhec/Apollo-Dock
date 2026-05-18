@@ -8,7 +8,12 @@ contextBridge.exposeInMainWorld('apolloDock', {
   hideDock: () => ipcRenderer.send('dock:hide'),
   quit: () => ipcRenderer.send('dock:quit'),
   openExternal: (url) => ipcRenderer.send('dock:open-external', url),
-  onOpenSettings: (cb) => ipcRenderer.on('open-settings', cb)
+  onOpenSettings: (cb) => ipcRenderer.on('open-settings', cb),
+  getScreenInfo: () => ipcRenderer.invoke('get-screen-info'),
+  moveWindow: (pos) => ipcRenderer.send('dock:move-window', pos),
+  menuHidden: () => ipcRenderer.send('menu-hidden'),
+  menuShown: () => ipcRenderer.send('menu-shown'),
+  bubbleHover: (hovered) => ipcRenderer.send('bubble-hover', hovered)
 });
 
 contextBridge.exposeInMainWorld('domainAgent', {
