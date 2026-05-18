@@ -56,7 +56,7 @@ function updateClickThrough() {
 function getDockDimensions(mode, isMenuOpen) {
   if (mode === 'sidebar') return { width: 220, height: 560 };
   if (isMenuOpen) return { width: 356, height: 480 };
-  return { width: 56, height: 56 };
+  return { width: 88, height: 88 };
 }
 
 function clampToWorkArea(x, y, width, height) {
@@ -83,6 +83,7 @@ function createDockWindow() {
     height,
     x,
     y,
+    show: false,
     frame: false,
     transparent: true,
     resizable: false,
@@ -97,7 +98,6 @@ function createDockWindow() {
     }
   });
 
-  dockWindow.setAlwaysOnTop(true, 'floating');
   dockWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
   dockWindow.setOpacity(settings.opacity);
 
@@ -105,6 +105,7 @@ function createDockWindow() {
 
   dockWindow.webContents.on('did-finish-load', () => {
     updateClickThrough();
+    if (dockWindow && !dockWindow.isVisible()) dockWindow.show();
   });
 
   dockWindow.on('move', () => {

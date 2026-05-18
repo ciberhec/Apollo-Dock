@@ -30,7 +30,7 @@ let drag = null;
 let suppressClickUntil = 0;
 
 function applyTheme(theme) {
-  els.body.classList.remove('theme-dark', 'theme-light', 'theme-apollo');
+  els.body.classList.remove('theme-dark', 'theme-light');
   els.body.classList.add(`theme-${theme}`);
 }
 
@@ -194,6 +194,9 @@ els.opacitySlider.addEventListener('input', async (e) => {
 async function init() {
   state = await api.getSettings();
   registry = await api.getRegistry();
+  if (state.theme !== 'dark' && state.theme !== 'light') {
+    state = await api.updateSettings({ theme: 'dark' });
+  }
   applyTheme(state.theme);
   applyMode(state.mode);
   setActiveSeg(els.modeGroup, 'mode', state.mode);

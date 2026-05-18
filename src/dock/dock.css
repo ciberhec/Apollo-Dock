@@ -11,29 +11,11 @@ html, body {
   -webkit-user-select: none;
 }
 
-:root {
-  --bg: #000000;
-  --bg-elev: #111111;
-  --bg-soft: #111111;
-  --fg: #FFD94D;
-  --fg-dim: rgba(255, 217, 77, 0.7);
-  --accent: #FFD94D;
-  --accent-hover: rgba(255, 217, 77, 0.85);
-  --accent-active: rgba(255, 217, 77, 1.0);
-  --accent-disabled: rgba(255, 217, 77, 0.35);
-  --border: #FFD94D;
-  --border-soft: rgba(255, 217, 77, 0.35);
-  --button-bg: #FFD94D;
-  --button-fg: #000000;
-  --danger: #FF4444;
-}
-
-body.theme-light,
-body.theme-apollo,
+:root,
 body.theme-dark {
   --bg: #000000;
   --bg-elev: #111111;
-  --bg-soft: #111111;
+  --bg-soft: #1A1A1A;
   --fg: #FFD94D;
   --fg-dim: rgba(255, 217, 77, 0.7);
   --accent: #FFD94D;
@@ -44,15 +26,39 @@ body.theme-dark {
   --border-soft: rgba(255, 217, 77, 0.35);
   --button-bg: #FFD94D;
   --button-fg: #000000;
+  --button-border: transparent;
+  --surface: #000000;
+  --surface-hover: #111111;
   --danger: #FF4444;
+}
+
+body.theme-light {
+  --bg: #FFFFFF;
+  --bg-elev: #F5F5F5;
+  --bg-soft: #EAEAEA;
+  --fg: #000000;
+  --fg-dim: rgba(0, 0, 0, 0.55);
+  --accent: #FFD94D;
+  --accent-hover: #E6C342;
+  --accent-active: #D4B23A;
+  --accent-disabled: rgba(255, 217, 77, 0.5);
+  --border: #000000;
+  --border-soft: rgba(0, 0, 0, 0.2);
+  --button-bg: #FFD94D;
+  --button-fg: #000000;
+  --button-border: #000000;
+  --surface: #000000;
+  --surface-hover: #111111;
+  --danger: #CC0000;
 }
 
 /* ============ BUBBLE MODE ============ */
 .bubble {
   position: fixed;
-  top: 0;
-  left: 0;
+  top: 16px;
+  left: 16px;
   display: block;
+  background: transparent;
   -webkit-app-region: no-drag;
 }
 
@@ -60,36 +66,39 @@ body.theme-dark {
   width: 56px;
   height: 56px;
   border-radius: 50%;
-  background: #000000;
-  border: 2px solid var(--border);
+  background: var(--surface);
+  border: 2px solid var(--accent);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: grab;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 217, 77, 0.2);
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
   -webkit-app-region: no-drag;
   transition: transform 0.15s ease, background 0.15s ease;
 }
 
-.bubble-core:hover { background: #111111; }
+.bubble-core:hover { background: var(--surface-hover); }
 .bubble-core:active { cursor: grabbing; transform: scale(0.95); }
+.bubble-core:focus,
+.bubble-core:focus-visible { outline: none; }
 
 .bubble-glyph {
   font-size: 26px;
-  color: var(--fg);
+  color: var(--accent);
   pointer-events: none;
 }
 
 .bubble-panel {
   position: fixed;
-  top: 0;
-  left: 68px;
+  top: 16px;
+  left: 84px;
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 14px;
   width: 240px;
   max-width: 240px;
-  max-height: 100vh;
+  max-height: calc(100vh - 32px);
   overflow-y: auto;
   padding: 10px 12px 12px;
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
@@ -133,7 +142,7 @@ body.theme-dark {
 }
 
 .tool-grid .tool-card:hover {
-  background: #000000;
+  background: var(--bg-soft);
   border-color: var(--border);
 }
 
@@ -171,9 +180,9 @@ body.theme-dark {
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  background: #000000;
-  border: 2px solid var(--border);
-  color: var(--fg);
+  background: var(--surface);
+  border: 2px solid var(--accent);
+  color: var(--accent);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -285,6 +294,7 @@ body.theme-dark {
   background: var(--button-bg);
   color: var(--button-fg);
   font-weight: 600;
+  box-shadow: 0 0 0 1px var(--button-border);
 }
 
 input[type=range] {
@@ -304,6 +314,7 @@ input[type=range]::-webkit-slider-thumb {
   background: var(--accent);
   border-radius: 50%;
   margin-top: -5px;
+  box-shadow: 0 0 0 1px var(--button-border);
 }
 
 .icon-btn {
@@ -316,6 +327,7 @@ input[type=range]::-webkit-slider-thumb {
   border-radius: 6px;
   cursor: pointer;
   font-family: inherit;
+  box-shadow: 0 0 0 1px var(--button-border);
   transition: background 0.15s ease;
 }
 .icon-btn:hover { background: var(--accent-hover); }
@@ -337,10 +349,11 @@ input[type=range]::-webkit-slider-thumb {
 
 /* ============ SCROLLBARS ============ */
 ::-webkit-scrollbar { width: 8px; height: 8px; }
-::-webkit-scrollbar-track { background: #000000; }
+::-webkit-scrollbar-track { background: var(--bg); }
 ::-webkit-scrollbar-thumb {
   background: var(--accent);
   border-radius: 4px;
+  box-shadow: inset 0 0 0 1px var(--button-border);
 }
 ::-webkit-scrollbar-thumb:hover { background: var(--accent-hover); }
 
