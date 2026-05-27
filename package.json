@@ -38,13 +38,13 @@
         { "target": "dmg", "arch": ["x64", "arm64"] },
         { "target": "dir", "arch": ["x64", "arm64"] }
       ],
-      "icon": "assets/icon.png",
+      "icon": "assets/Apollo Dock logo.png",
       "hardenedRuntime": false,
       "gatekeeperAssess": false
     },
     "dmg": {
       "title": "Apollo Dock",
-      "icon": "assets/icon.png"
+      "icon": "assets/Apollo Dock logo.png"
     }
   }
 }

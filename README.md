@@ -52,7 +52,7 @@ Apollo Dock is built so that adding a new tool requires zero changes to the dock
 
 3. Restart Apollo Dock — the new tool appears automatically in both the bubble panel and the sidebar.
 
-If the tool needs Node-level capabilities (DNS, filesystem, network), register an `ipcMain.handle(...)` channel in `src/main.js` and expose it via `src/preload.js`, mirroring how `domain-agent:analyze` is wired up. The renderer stays sandboxed.
+If your tool needs Node-level capabilities (DNS, filesystem, network), register an `ipcMain.handle(...)` channel in `src/main.js` and expose it via `src/preload.js`, mirroring how `domain-agent:analyze` is wired up. The renderer stays sandboxed.
 
 ## Configuring API keys (placeholder)
 
