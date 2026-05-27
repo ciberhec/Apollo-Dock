@@ -6,6 +6,8 @@ const dnsLookup = require('./tools/domain-agent/core/dns-lookup');
 const scraper = require('./tools/domain-agent/core/scraper');
 const analyzer = require('./tools/domain-agent/core/analyzer');
 
+if (process.platform === 'darwin') app.setActivationPolicy('regular');
+
 const SETTINGS_FILE = () => path.join(app.getPath('userData'), 'settings.json');
 const DEFAULT_SETTINGS = {
   mode: 'bubble',
@@ -88,7 +90,6 @@ function createDockWindow() {
     transparent: true,
     resizable: false,
     alwaysOnTop: true,
-    skipTaskbar: true,
     hasShadow: false,
     backgroundColor: '#00000000',
     webPreferences: {
@@ -218,10 +219,14 @@ function createTray() {
 }
 
 app.whenReady().then(() => {
+  if (process.platform === 'darwin') app.setActivationPolicy('regular');
   settings = loadSettings();
   createDockWindow();
   createTray();
-  if (process.platform === 'darwin') app.dock?.hide();
+  if (process.platform === 'darwin') {
+    app.setActivationPolicy('regular');
+    app.dock?.show();
+  }
 });
 
 app.on('window-all-closed', (e) => {
