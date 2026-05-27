@@ -177,7 +177,7 @@ function buildTrayIcon() {
   const iconPath = path.join(__dirname, '..', 'assets', 'Apollo Dock logo.png');
   if (fs.existsSync(iconPath)) {
     const img = nativeImage.createFromPath(iconPath);
-    return img.isEmpty() ? nativeImage.createEmpty() : img.resize({ width: 18, height: 18 });
+    return img.isEmpty() ? nativeImage.createEmpty() : img.resize({ width: 22, height: 22 });
   }
   return nativeImage.createEmpty();
 }

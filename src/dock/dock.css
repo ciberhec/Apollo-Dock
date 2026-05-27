@@ -63,8 +63,8 @@ body.theme-light {
 }
 
 .bubble-core {
-  width: 56px;
-  height: 56px;
+  width: 60px;
+  height: 60px;
   border-radius: 50%;
   background: transparent;
   display: flex;
