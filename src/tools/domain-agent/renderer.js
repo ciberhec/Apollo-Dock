@@ -41,12 +41,14 @@ function escapeHtml(s) {
   return String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
-// Render copy text: escape, turn `code` spans into <code>, double-newlines into paragraph breaks.
+// Render copy text: escape, turn `code` spans into <code>, **bold** into <strong>,
+// and double-newlines into paragraph breaks.
 function formatBody(text) {
   if (!text) return '';
   const escaped = escapeHtml(text);
   const withCode = escaped.replace(/`([^`]+)`/g, '<code>$1</code>');
-  const paragraphs = withCode.split(/\n\n+/).map((p) => p.replace(/\n/g, '<br>'));
+  const withBold = withCode.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  const paragraphs = withBold.split(/\n\n+/).map((p) => p.replace(/\n/g, '<br>'));
   return paragraphs.map((p) => `<p>${p}</p>`).join('');
 }
 
@@ -135,9 +137,16 @@ function renderRootSection(rootReport) {
 
 function buildCustomerMessage(report) {
   const lines = [];
+  const flow = report.raw?.mailFlow;
   lines.push(`Hi,`);
   lines.push('');
-  lines.push(`We ran a DNS authentication check on ${report.domain} (detected mail provider: ${report.provider}).`);
+  if (flow?.gateway && flow.backend) {
+    lines.push(`We ran a DNS authentication check on ${report.domain}. Your mail flows through ${flow.gateway} (security filter) to ${flow.backend}.`);
+  } else if (flow?.gateway) {
+    lines.push(`We ran a DNS authentication check on ${report.domain}. Your mail flows through ${flow.gateway} (security filter) — we couldn't confirm the backend mailbox provider from public DNS.`);
+  } else {
+    lines.push(`We ran a DNS authentication check on ${report.domain} (detected mail provider: ${report.provider}).`);
+  }
   lines.push('');
 
   const passed = report.findings.filter((f) => f.status === 'pass').map((f) => f.key);

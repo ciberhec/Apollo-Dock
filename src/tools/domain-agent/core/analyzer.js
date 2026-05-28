@@ -299,7 +299,79 @@ function analyzeBlacklists(blacklistResults) {
   };
 }
 
-function analyzeProvider(provider) {
+// Friendly names for the source field on each backend-inference signal.
+const SIGNAL_LABELS = {
+  spf: 'the SPF record',
+  autodiscover: 'the autodiscover DNS setting',
+  'ms-tenant': 'a Microsoft tenant verification record',
+  'dkim-selector': 'the DKIM selector name'
+};
+
+function describeSignals(signals) {
+  if (!signals || signals.length === 0) return '';
+  const labels = signals.map((s) => SIGNAL_LABELS[s.source] || s.source);
+  if (labels.length === 1) return labels[0];
+  if (labels.length === 2) return `${labels[0]} and ${labels[1]}`;
+  return `${labels.slice(0, -1).join(', ')}, and ${labels[labels.length - 1]}`;
+}
+
+function analyzeGatewayProvider(mailFlow) {
+  const { gateway, backend, confidence, signals } = mailFlow;
+  const backendSignals = signals.filter((s) => s.infers === backend);
+  const otherSignals = signals.filter((s) => s.infers !== backend);
+
+  // High confidence: 2+ signals agree on the same backend.
+  if (backend && confidence === 'high') {
+    return {
+      key: 'Provider',
+      status: STATUS.PASS,
+      value: `${gateway} → ${backend}`,
+      summary: `Mail goes through ${gateway} (security filter), then to ${backend}.`,
+      details: `Heads up — this domain has a security filter in front of the mailbox. Mail flows through **${gateway}** first (where it gets scanned for spam and threats), and then lands at the real mailbox provider, **${backend}**.\n\nWe can tell ${backend} is the real backend because ${describeSignals(backendSignals)} all point there.\n\nThe recommendations below are tailored to ${backend}, since that's where the actual mailboxes live.`,
+      recommendation: null
+    };
+  }
+
+  // Medium confidence: only one signal pointing to a backend.
+  if (backend && confidence === 'medium') {
+    return {
+      key: 'Provider',
+      status: STATUS.INFO,
+      value: `${gateway} → ${backend} (likely)`,
+      summary: `Mail goes through ${gateway} (security filter). Probably ${backend} behind it, but worth confirming.`,
+      details: `Heads up — this domain has a security filter in front of the mailbox. Mail flows through **${gateway}** first (where it gets scanned for spam and threats), and likely lands at **${backend}** behind it.\n\nWe found one hint pointing to ${backend} (${describeSignals(backendSignals)}), but only one — worth asking the customer to confirm before acting on the recommendations.\n\nThe recommendations below assume ${backend} as the backend. If the customer confirms something else, we'll need to redo them.`,
+      recommendation: null
+    };
+  }
+
+  // Low confidence: signals disagree (likely hybrid or in-migration setup).
+  if (backend && confidence === 'low') {
+    return {
+      key: 'Provider',
+      status: STATUS.WARN,
+      value: `${gateway} → mixed signals`,
+      summary: `Mail goes through ${gateway}, but DNS signals disagree on what's behind it.`,
+      details: `Heads up — this domain has a security filter in front of the mailbox. Mail flows through **${gateway}** first, but the DNS hints about what's behind it disagree.\n\nSome signals point to **${backend}** (${describeSignals(backendSignals)}), but others point elsewhere (${describeSignals(otherSignals)}). This often happens with hybrid setups or a mailbox migration in progress.\n\nBest to ask the customer directly which mail service their team uses today, before giving SPF/DKIM recommendations.`,
+      recommendation: null
+    };
+  }
+
+  // No backend signals at all — gateway is all we can see.
+  return {
+    key: 'Provider',
+    status: STATUS.INFO,
+    value: `${gateway} → ???`,
+    summary: `Mail goes through ${gateway} (security filter). The mailbox behind it isn't visible from DNS.`,
+    details: `Heads up — this domain has a security filter in front of the mailbox. Mail flows through **${gateway}** first (where it gets scanned for spam and threats), but we can't see what's behind it from public DNS — could be Microsoft 365, Google Workspace, or a custom mail server.\n\nAsk the customer which mail service their team uses, so we can give specific SPF and DKIM recommendations. Until then, the recommendations below are generic.`,
+    recommendation: null
+  };
+}
+
+function analyzeProvider(provider, mailFlow) {
+  if (mailFlow?.gateway) {
+    return analyzeGatewayProvider(mailFlow);
+  }
+
   if (provider === 'Google (DNS only)') {
     return {
       key: 'Provider',
@@ -346,7 +418,7 @@ function analyzeProvider(provider) {
 function analyze(dnsResults) {
   const provider = dnsResults.provider;
   const findings = [
-    analyzeProvider(provider),
+    analyzeProvider(provider, dnsResults.mailFlow),
     analyzeSpf(dnsResults.spf, provider),
     analyzeDmarc(dnsResults.dmarc, provider),
     analyzeDkim(dnsResults.dkim, provider),

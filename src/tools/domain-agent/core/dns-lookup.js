@@ -128,6 +128,108 @@ async function checkAllBlacklists(ips) {
   return allResults;
 }
 
+// Email security gateways sit in front of the real mailbox provider and rewrite
+// the MX records so only the gateway is visible. Detecting one is the trigger
+// to go look for the real backend with the helpers below.
+const GATEWAY_PATTERNS = [
+  { name: 'Barracuda', patterns: ['barracudanetworks.com', 'barracuda.com'] },
+  { name: 'Mimecast', patterns: ['mimecast.com', 'mimecast.co.uk', 'mimecast-offshore.com', 'mimecast.co.za'] },
+  { name: 'Proofpoint', patterns: ['pphosted.com', 'ppe-hosted.com', 'mxlogic.net', 'proofpoint.com'] },
+  { name: 'Cisco IronPort', patterns: ['iphmx.com', 'iron.tools'] }
+];
+
+function detectGateway(mxRecords) {
+  const mxJoined = mxRecords.map((m) => m.exchange.toLowerCase()).join(' ');
+  for (const g of GATEWAY_PATTERNS) {
+    if (g.patterns.some((p) => mxJoined.includes(p))) return g.name;
+  }
+  return null;
+}
+
+// When a gateway is detected, these helpers look for independent signals in
+// other DNS records to identify the real mailbox provider behind it.
+
+const BACKEND_SPF_INCLUDES = [
+  { pattern: 'spf.protection.outlook.com', infers: 'Microsoft 365' },
+  { pattern: '_spf.google.com', infers: 'Google Workspace' },
+  { pattern: 'spf.mail.zoho.com', infers: 'Zoho Mail' }
+];
+
+function inferBackendFromSpf(spf) {
+  if (!spf) return null;
+  const lower = spf.toLowerCase();
+  for (const b of BACKEND_SPF_INCLUDES) {
+    if (lower.includes(b.pattern)) {
+      return { source: 'spf', value: b.pattern, infers: b.infers };
+    }
+  }
+  return null;
+}
+
+async function getAutodiscoverCname(domain) {
+  try {
+    const records = await dns.resolveCname(`autodiscover.${domain}`);
+    return records || [];
+  } catch {
+    return [];
+  }
+}
+
+function inferBackendFromAutodiscover(autodiscoverRecords) {
+  if (!autodiscoverRecords || autodiscoverRecords.length === 0) return null;
+  const joined = autodiscoverRecords.join(' ').toLowerCase();
+  if (joined.includes('outlook.com')) {
+    return { source: 'autodiscover', value: autodiscoverRecords.join(', '), infers: 'Microsoft 365' };
+  }
+  return null;
+}
+
+async function getMsTenantTxt(domain) {
+  const txts = await lookupTxt(domain).catch(() => []);
+  const ms = txts.find((t) => /^MS=ms\d+/i.test(t));
+  return ms || null;
+}
+
+function inferBackendFromMsTenant(msTenantTxt) {
+  if (!msTenantTxt) return null;
+  return { source: 'ms-tenant', value: msTenantTxt, infers: 'Microsoft 365' };
+}
+
+function inferBackendFromDkim(dkim) {
+  if (!dkim) return null;
+  const sel = dkim.selector;
+  if (sel === 'google') return { source: 'dkim-selector', value: sel, infers: 'Google Workspace' };
+  if (sel === 'selector1' || sel === 'selector2') return { source: 'dkim-selector', value: sel, infers: 'Microsoft 365' };
+  return null;
+}
+
+function buildMailFlow({ gateway, spf, dkim, autodiscover, msTenant }) {
+  if (!gateway) return null;
+
+  const signals = [
+    inferBackendFromSpf(spf),
+    inferBackendFromAutodiscover(autodiscover),
+    inferBackendFromMsTenant(msTenant),
+    inferBackendFromDkim(dkim)
+  ].filter(Boolean);
+
+  // Tally votes per inferred backend so we can spot agreement vs. conflict.
+  const counts = {};
+  signals.forEach((s) => { counts[s.infers] = (counts[s.infers] || 0) + 1; });
+  const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+
+  let backend = null;
+  let confidence = null;
+  if (entries.length > 0) {
+    backend = entries[0][0];
+    if (entries.length > 1) confidence = 'low';
+    else if (entries[0][1] >= 2) confidence = 'high';
+    else confidence = 'medium';
+  }
+
+  return { gateway, backend, confidence, signals };
+}
+
 function detectProvider(mxRecords, nsRecords) {
   const mxJoined = mxRecords.map((m) => m.exchange.toLowerCase()).join(' ');
   const nsJoined = nsRecords.map((n) => n.toLowerCase()).join(' ');
@@ -154,8 +256,11 @@ async function fullLookup(domain) {
     mx: [],
     ns: [],
     a: [],
+    autodiscover: [],
+    msTenant: null,
     blacklists: [],
     provider: 'Unknown',
+    mailFlow: null,
     errors
   };
 
@@ -165,10 +270,32 @@ async function fullLookup(domain) {
     getDkim(domain).then((r) => { result.dkim = r; }).catch((e) => { errors.dkim = e.message; }),
     getMx(domain).then((r) => { result.mx = r; }).catch((e) => { errors.mx = e.message; }),
     getNs(domain).then((r) => { result.ns = r; }).catch((e) => { errors.ns = e.message; }),
-    getA(domain).then((r) => { result.a = r; }).catch((e) => { errors.a = e.message; })
+    getA(domain).then((r) => { result.a = r; }).catch((e) => { errors.a = e.message; }),
+    getAutodiscoverCname(domain).then((r) => { result.autodiscover = r; }).catch((e) => { errors.autodiscover = e.message; }),
+    getMsTenantTxt(domain).then((r) => { result.msTenant = r; }).catch((e) => { errors.msTenant = e.message; })
   ]);
 
-  result.provider = detectProvider(result.mx, result.ns);
+  const gateway = detectGateway(result.mx);
+  result.mailFlow = buildMailFlow({
+    gateway,
+    spf: result.spf,
+    dkim: result.dkim,
+    autodiscover: result.autodiscover,
+    msTenant: result.msTenant
+  });
+
+  // Pick the "effective" provider for recommendations. Backend wins when the
+  // signals agree (high or medium confidence), so SPF/DKIM tips target the real
+  // mailbox. Low confidence (signals disagree) falls back to the gateway label
+  // so recommendations stay generic — the Provider card already tells the tester
+  // to confirm with the customer.
+  if (result.mailFlow?.backend && (result.mailFlow.confidence === 'high' || result.mailFlow.confidence === 'medium')) {
+    result.provider = result.mailFlow.backend;
+  } else if (gateway) {
+    result.provider = gateway;
+  } else {
+    result.provider = detectProvider(result.mx, result.ns);
+  }
 
   if (result.a.length > 0) {
     try {
@@ -184,6 +311,7 @@ async function fullLookup(domain) {
 module.exports = {
   DKIM_SELECTORS,
   DNSBLS,
+  GATEWAY_PATTERNS,
   fullLookup,
   getSpf,
   getDmarc,
@@ -191,8 +319,12 @@ module.exports = {
   getMx,
   getNs,
   getA,
+  getAutodiscoverCname,
+  getMsTenantTxt,
   checkAllBlacklists,
   detectProvider,
+  detectGateway,
+  buildMailFlow,
   getRootDomain,
   isSubdomain
 };
