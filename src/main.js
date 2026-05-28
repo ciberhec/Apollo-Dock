@@ -286,7 +286,13 @@ ipcMain.handle('domain-agent:analyze', async (_evt, rawDomain) => {
   }
 
   try {
-    const dnsResults = await dnsLookup.fullLookup(domain);
+    const rootDomain = dnsLookup.getRootDomain(domain);
+    const inputIsSubdomain = dnsLookup.isSubdomain(domain);
+
+    const [dnsResults, rootDnsResults] = await Promise.all([
+      dnsLookup.fullLookup(domain),
+      inputIsSubdomain ? dnsLookup.fullLookup(rootDomain) : Promise.resolve(null)
+    ]);
 
     const missing = {
       spf: !dnsResults.spf,
@@ -307,7 +313,10 @@ ipcMain.handle('domain-agent:analyze', async (_evt, rawDomain) => {
     }
 
     const report = analyzer.analyze(dnsResults);
-    return { ok: true, report, scraped };
+    const rootReport = rootDnsResults ? analyzer.analyze(rootDnsResults) : null;
+    const subdomainContext = rootReport ? analyzer.compareSubdomainToRoot(report, rootReport) : null;
+
+    return { ok: true, report, rootReport, subdomainContext, scraped };
   } catch (err) {
     return { ok: false, error: err.message || String(err) };
   }

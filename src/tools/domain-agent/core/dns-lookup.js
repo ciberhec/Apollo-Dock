@@ -9,6 +9,30 @@ const DNSBLS = [
   'dnsbl.sorbs.net'
 ];
 
+// Naive list of common compound TLDs so we treat `co.uk`, `com.mx`, etc. as a single suffix
+// instead of stripping them too aggressively. Not a full PSL but covers the cases we see.
+const COMPOUND_TLDS = new Set([
+  'co.uk', 'co.jp', 'co.kr', 'co.nz', 'co.za', 'co.in', 'co.il',
+  'com.au', 'com.br', 'com.mx', 'com.ar', 'com.co', 'com.pe', 'com.tr', 'com.tw', 'com.cn', 'com.sg',
+  'org.uk', 'gov.uk', 'ac.uk',
+  'net.au', 'gov.au', 'org.au',
+  'ne.jp', 'or.jp', 'ac.jp'
+]);
+
+function getRootDomain(domain) {
+  const parts = String(domain || '').toLowerCase().split('.');
+  if (parts.length < 2) return domain;
+  const lastTwo = parts.slice(-2).join('.');
+  if (COMPOUND_TLDS.has(lastTwo) && parts.length >= 3) {
+    return parts.slice(-3).join('.');
+  }
+  return lastTwo;
+}
+
+function isSubdomain(domain) {
+  return getRootDomain(domain) !== domain;
+}
+
 async function lookupTxt(name) {
   try {
     const records = await dns.resolveTxt(name);
@@ -168,5 +192,7 @@ module.exports = {
   getNs,
   getA,
   checkAllBlacklists,
-  detectProvider
+  detectProvider,
+  getRootDomain,
+  isSubdomain
 };

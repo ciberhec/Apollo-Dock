@@ -33,14 +33,22 @@
   <section id="status" class="status hidden"></section>
 
   <main id="report" class="report hidden">
+    <section id="subdomainBanner" class="subdomain-banner hidden"></section>
+
     <section class="report-section">
-      <h2 class="section-title">Status Summary</h2>
+      <h2 id="primaryReportTitle" class="section-title">Status Summary</h2>
       <div id="summaryGrid" class="summary-grid"></div>
     </section>
 
     <section class="report-section">
       <h2 class="section-title">Step-by-step Fix Guide</h2>
       <div id="fixGuide" class="fix-guide"></div>
+    </section>
+
+    <section id="rootReportSection" class="report-section root-report hidden">
+      <h2 class="section-title">Main domain — <span id="rootDomainLabel"></span></h2>
+      <div id="rootSummaryGrid" class="summary-grid"></div>
+      <div id="rootFixGuide" class="fix-guide"></div>
     </section>
 
     <section class="report-section subtle">

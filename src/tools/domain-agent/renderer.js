@@ -4,8 +4,14 @@ const els = {
   claudeBtn: document.getElementById('claudeBtn'),
   status: document.getElementById('status'),
   report: document.getElementById('report'),
+  subdomainBanner: document.getElementById('subdomainBanner'),
+  primaryReportTitle: document.getElementById('primaryReportTitle'),
   summaryGrid: document.getElementById('summaryGrid'),
   fixGuide: document.getElementById('fixGuide'),
+  rootReportSection: document.getElementById('rootReportSection'),
+  rootDomainLabel: document.getElementById('rootDomainLabel'),
+  rootSummaryGrid: document.getElementById('rootSummaryGrid'),
+  rootFixGuide: document.getElementById('rootFixGuide'),
   customerMessage: document.getElementById('customerMessage'),
   copyMsgBtn: document.getElementById('copyMsgBtn')
 };
@@ -22,6 +28,12 @@ function clearReport() {
   els.report.classList.add('hidden');
   els.summaryGrid.innerHTML = '';
   els.fixGuide.innerHTML = '';
+  els.subdomainBanner.innerHTML = '';
+  els.subdomainBanner.classList.add('hidden');
+  els.rootReportSection.classList.add('hidden');
+  els.rootSummaryGrid.innerHTML = '';
+  els.rootFixGuide.innerHTML = '';
+  els.primaryReportTitle.textContent = 'Status Summary';
   els.customerMessage.textContent = '';
 }
 
@@ -29,8 +41,17 @@ function escapeHtml(s) {
   return String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
-function renderSummary(findings) {
-  els.summaryGrid.innerHTML = findings.map((f) => {
+// Render copy text: escape, turn `code` spans into <code>, double-newlines into paragraph breaks.
+function formatBody(text) {
+  if (!text) return '';
+  const escaped = escapeHtml(text);
+  const withCode = escaped.replace(/`([^`]+)`/g, '<code>$1</code>');
+  const paragraphs = withCode.split(/\n\n+/).map((p) => p.replace(/\n/g, '<br>'));
+  return paragraphs.map((p) => `<p>${p}</p>`).join('');
+}
+
+function renderSummary(findings, target = els.summaryGrid) {
+  target.innerHTML = findings.map((f) => {
     const valueBlock = f.value
       ? `<div class="summary-value">${escapeHtml(f.value)}</div>`
       : '';
@@ -41,26 +62,27 @@ function renderSummary(findings) {
           <span class="status-pill ${f.status}">${ICONS[f.status]} ${f.status}</span>
         </div>
         <div class="summary-summary">${escapeHtml(f.summary)}</div>
+        <div class="summary-details">${formatBody(f.details)}</div>
         ${valueBlock}
       </div>
     `;
   }).join('');
 }
 
-function renderFixGuide(findings) {
+function renderFixGuide(findings, target = els.fixGuide) {
   const needsFix = findings.filter((f) => f.recommendation);
   if (needsFix.length === 0) {
-    els.fixGuide.innerHTML = `<div class="fix-card"><div class="fix-problem">${ICONS.pass} All checks passed. No remediation needed.</div></div>`;
+    target.innerHTML = `<div class="fix-card"><div class="fix-problem">${ICONS.pass} All checks passed. No remediation needed.</div></div>`;
     return;
   }
 
-  els.fixGuide.innerHTML = needsFix.map((f, idx) => {
+  target.innerHTML = needsFix.map((f, idx) => {
     const r = f.recommendation;
     const recordRow = r.record
       ? `<div class="fix-row"><div class="fix-label">Record</div><div class="fix-val"><div class="fix-record">${escapeHtml(r.record)}</div></div></div>`
       : '';
     const noteRow = r.note
-      ? `<div class="fix-row"><div class="fix-label">Note</div><div class="fix-val">${escapeHtml(r.note)}</div></div>`
+      ? `<div class="fix-row"><div class="fix-label">Note</div><div class="fix-val">${formatBody(r.note)}</div></div>`
       : '';
     const docsRow = r.docs
       ? `<div class="fix-row"><div class="fix-label">Docs</div><div class="fix-val"><a href="#" data-href="${escapeHtml(r.docs)}">${escapeHtml(r.docs)}</a></div></div>`
@@ -68,7 +90,7 @@ function renderFixGuide(findings) {
     return `
       <div class="fix-card">
         <h3>${ICONS[f.status]} Step ${idx + 1}: Fix ${escapeHtml(f.key)}</h3>
-        <div class="fix-problem"><strong>Problem:</strong> ${escapeHtml(f.summary)} ${escapeHtml(f.details || '')}</div>
+        <div class="fix-problem"><strong>${escapeHtml(f.summary)}</strong>${formatBody(f.details)}</div>
         <div class="fix-row"><div class="fix-label">Where</div><div class="fix-val">${escapeHtml(r.where)}</div></div>
         ${recordRow}
         ${noteRow}
@@ -77,12 +99,38 @@ function renderFixGuide(findings) {
     `;
   }).join('');
 
-  els.fixGuide.querySelectorAll('a[data-href]').forEach((a) => {
+  target.querySelectorAll('a[data-href]').forEach((a) => {
     a.addEventListener('click', (e) => {
       e.preventDefault();
       window.apolloDock?.openExternal(a.dataset.href);
     });
   });
+}
+
+function renderSubdomainBanner(ctx) {
+  if (!ctx) {
+    els.subdomainBanner.classList.add('hidden');
+    els.subdomainBanner.innerHTML = '';
+    return;
+  }
+  els.subdomainBanner.classList.remove('hidden');
+  els.subdomainBanner.classList.toggle('match', ctx.banner.kind === 'match');
+  els.subdomainBanner.classList.toggle('diverge', ctx.banner.kind === 'diverge');
+  els.subdomainBanner.innerHTML = `
+    <h3 class="banner-title">${escapeHtml(ctx.banner.title)}</h3>
+    <div class="banner-body">${formatBody(ctx.banner.body)}</div>
+  `;
+}
+
+function renderRootSection(rootReport) {
+  if (!rootReport) {
+    els.rootReportSection.classList.add('hidden');
+    return;
+  }
+  els.rootReportSection.classList.remove('hidden');
+  els.rootDomainLabel.textContent = rootReport.domain;
+  renderSummary(rootReport.findings, els.rootSummaryGrid);
+  renderFixGuide(rootReport.findings, els.rootFixGuide);
 }
 
 function buildCustomerMessage(report) {
@@ -143,8 +191,13 @@ async function runAnalysis() {
 
   setStatus(`Analysis complete for <strong>${escapeHtml(res.report.domain)}</strong>. Overall status: <strong>${res.report.overall.toUpperCase()}</strong>.`);
 
+  renderSubdomainBanner(res.subdomainContext);
+  els.primaryReportTitle.textContent = res.subdomainContext
+    ? `Subdomain — ${res.report.domain}`
+    : 'Status Summary';
   renderSummary(res.report.findings);
   renderFixGuide(res.report.findings);
+  renderRootSection(res.rootReport);
   els.customerMessage.textContent = buildCustomerMessage(res.report);
   els.report.classList.remove('hidden');
 }

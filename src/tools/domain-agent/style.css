@@ -179,7 +179,27 @@ body { padding: 24px 32px 48px; overflow-y: auto; }
 .status-pill.fail { background: rgba(255, 68, 68, 0.15); color: var(--fail); }
 .status-pill.info { background: rgba(255, 217, 77, 0.1); color: var(--info); }
 
-.summary-summary { font-size: 13px; color: var(--fg); }
+.summary-summary { font-size: 13px; color: var(--fg); font-weight: 600; }
+.summary-details {
+  font-size: 12px;
+  color: var(--fg-dim);
+  line-height: 1.55;
+}
+.summary-details p { margin: 4px 0; }
+.summary-details p:first-child { margin-top: 0; }
+.summary-details p:last-child { margin-bottom: 0; }
+.summary-details code,
+.fix-problem code,
+.fix-row .fix-val code,
+.banner-body code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.9em;
+  background: rgba(255, 217, 77, 0.1);
+  border: 1px solid var(--border-soft);
+  padding: 1px 5px;
+  border-radius: 4px;
+  color: var(--fg);
+}
 .summary-value {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 11px;
@@ -208,6 +228,10 @@ body { padding: 24px 32px 48px; overflow-y: auto; }
   gap: 8px;
 }
 .fix-card .fix-problem { font-size: 13px; color: var(--fg); margin-bottom: 12px; }
+.fix-problem p { margin: 6px 0 0; color: var(--fg-dim); font-size: 12px; line-height: 1.55; }
+.fix-row .fix-val p { margin: 4px 0; }
+.fix-row .fix-val p:first-child { margin-top: 0; }
+.fix-row .fix-val p:last-child { margin-bottom: 0; }
 
 .fix-row {
   display: flex;
@@ -260,6 +284,38 @@ body { padding: 24px 32px 48px; overflow-y: auto; }
   color: var(--fg);
   line-height: 1.55;
 }
+
+.subdomain-banner {
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--info);
+  border-radius: 12px;
+  padding: 14px 18px;
+  margin-bottom: 20px;
+}
+.subdomain-banner.diverge { border-left-color: var(--warn); }
+.subdomain-banner.match { border-left-color: var(--pass); }
+.banner-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--fg);
+  margin-bottom: 6px;
+}
+.banner-body {
+  font-size: 13px;
+  color: var(--fg-dim);
+  line-height: 1.55;
+}
+.banner-body p { margin: 6px 0; }
+.banner-body p:first-child { margin-top: 0; }
+.banner-body p:last-child { margin-bottom: 0; }
+
+.root-report {
+  border-top: 1px dashed var(--border-soft);
+  padding-top: 24px;
+}
+.root-report .section-title { color: var(--fg); }
+.root-report #rootFixGuide { margin-top: 16px; }
 
 .spinner {
   display: inline-block;
