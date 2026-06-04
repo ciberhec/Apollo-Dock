@@ -5,6 +5,7 @@ const fs = require('fs');
 const dnsLookup = require('./tools/domain-agent/core/dns-lookup');
 const scraper = require('./tools/domain-agent/core/scraper');
 const analyzer = require('./tools/domain-agent/core/analyzer');
+const updater = require('./core/updater');
 
 if (process.platform === 'darwin') app.setActivationPolicy('regular');
 
@@ -227,6 +228,7 @@ app.whenReady().then(() => {
     app.setActivationPolicy('regular');
     app.dock?.show();
   }
+  updater.start();
 });
 
 app.on('window-all-closed', (e) => {
@@ -278,6 +280,11 @@ ipcMain.handle('menu-shown', () => {
   applyMenuOpenSize(true);
   updateClickThrough();
 });
+
+ipcMain.handle('updater:get-state', () => updater.getState());
+ipcMain.handle('updater:check', () => updater.checkForUpdate({ manual: true }));
+ipcMain.handle('updater:install', () => updater.installUpdate());
+ipcMain.handle('app:get-version', () => app.getVersion());
 
 ipcMain.handle('domain-agent:analyze', async (_evt, rawDomain) => {
   const domain = String(rawDomain || '').trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, '');

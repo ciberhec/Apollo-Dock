@@ -1,8 +1,13 @@
 #!/usr/bin/env bash
 # Apollo Dock — one-shot installer for macOS.
 # Installs Homebrew (if missing), Node.js >= 18, npm deps, packages the
-# Electron app with electron-builder, and moves the resulting .app into
-# /Applications.
+# Electron app with electron-builder, and installs the resulting .app into
+# ~/Applications.
+#
+# Why ~/Applications instead of /Applications: the in-app updater needs to
+# swap the .app bundle in place without prompting the user for an admin
+# password every release. ~/Applications is user-writable; /Applications is
+# not. Spotlight, the Dock, and Launchpad all index ~/Applications normally.
 
 set -euo pipefail
 
@@ -64,7 +69,7 @@ npm install
 bold "==> Packaging Apollo Dock with electron-builder…"
 npm run build
 
-# 5. Move .app into /Applications -----------------------------------------
+# 5. Install .app into ~/Applications -------------------------------------
 APP_NAME="Apollo Dock.app"
 SRC_APP=""
 for candidate in \
@@ -84,7 +89,22 @@ if [[ -z "${SRC_APP}" ]]; then
   exit 1
 fi
 
-DEST="/Applications/${APP_NAME}"
+USER_APPS="${HOME}/Applications"
+DEST="${USER_APPS}/${APP_NAME}"
+LEGACY_DEST="/Applications/${APP_NAME}"
+
+mkdir -p "${USER_APPS}"
+
+# One-time migration: if a previous install lives in /Applications, remove it.
+# Requires sudo because /Applications isn't user-writable. We only need this
+# once; future updates will land in ~/Applications without any sudo prompt.
+if [[ -d "${LEGACY_DEST}" ]]; then
+  yellow "==> Detected legacy install at ${LEGACY_DEST}."
+  yellow "    Removing it so the new install in ${USER_APPS} is the only copy."
+  yellow "    (You may be prompted for your password — this is a one-time step.)"
+  sudo rm -rf "${LEGACY_DEST}"
+fi
+
 if [[ -d "${DEST}" ]]; then
   yellow "==> Removing previous installation at ${DEST}…"
   rm -rf "${DEST}"
@@ -97,7 +117,12 @@ green ""
 green "================================================================"
 green "  Apollo Dock installed successfully."
 green ""
-green "  • Launch:    open \"/Applications/Apollo Dock.app\""
+green "  • Launch:    open \"${DEST}\""
 green "  • Or: Spotlight (⌘ + Space) → \"Apollo Dock\""
 green "  • Right-click the tray icon for Open / Settings / Quit."
+green ""
+green "  First launch: macOS will warn that the app is from an"
+green "  unidentified developer. Right-click the app → Open → Open."
+green "  This only happens once. Future updates happen in-app with"
+green "  no Gatekeeper prompt."
 green "================================================================"

@@ -11,7 +11,18 @@ contextBridge.exposeInMainWorld('apolloDock', {
   onOpenSettings: (cb) => ipcRenderer.on('open-settings', cb),
   dragWindowBy: (delta) => ipcRenderer.send('dock:drag-by', delta),
   menuHidden: () => ipcRenderer.invoke('menu-hidden'),
-  menuShown: () => ipcRenderer.invoke('menu-shown')
+  menuShown: () => ipcRenderer.invoke('menu-shown'),
+  getVersion: () => ipcRenderer.invoke('app:get-version'),
+  updater: {
+    getState: () => ipcRenderer.invoke('updater:get-state'),
+    check: () => ipcRenderer.invoke('updater:check'),
+    install: () => ipcRenderer.invoke('updater:install'),
+    onStateChanged: (cb) => {
+      const listener = (_e, state) => cb(state);
+      ipcRenderer.on('updater:state-changed', listener);
+      return () => ipcRenderer.removeListener('updater:state-changed', listener);
+    }
+  }
 });
 
 contextBridge.exposeInMainWorld('domainAgent', {

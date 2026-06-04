@@ -18,7 +18,12 @@ const els = {
   themeGroup: document.getElementById('themeGroup'),
   opacitySlider: document.getElementById('opacitySlider'),
   opacityValue: document.getElementById('opacityValue'),
-  quitBtn: document.getElementById('quitBtn')
+  quitBtn: document.getElementById('quitBtn'),
+  updateBadge: document.getElementById('updateBadge'),
+  updateBanner: document.getElementById('updateBanner'),
+  updateCheckBtn: document.getElementById('updateCheckBtn'),
+  updateVersionLabel: document.getElementById('updateVersionLabel'),
+  updateStatusMsg: document.getElementById('updateStatusMsg')
 };
 
 const DRAG_THRESHOLD = 3;
@@ -191,6 +196,98 @@ els.opacitySlider.addEventListener('input', async (e) => {
   state = await api.updateSettings({ opacity: pct / 100 });
 });
 
+// -----------------------------------------------------------------------------
+// Updater
+// -----------------------------------------------------------------------------
+
+let appVersion = '';
+
+function formatBytes(n) {
+  if (!n) return '0 KB';
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(0)} KB`;
+  return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function renderUpdate(updateState) {
+  if (!updateState) return;
+  const { phase, available, progress, message, error } = updateState;
+
+  // Settings panel — always reflects current state.
+  els.updateVersionLabel.textContent = `Version ${appVersion || '—'}`;
+  if (error) {
+    els.updateStatusMsg.textContent = error;
+    els.updateStatusMsg.className = 'update-status-msg error';
+  } else if (message) {
+    els.updateStatusMsg.textContent = message;
+    els.updateStatusMsg.className = 'update-status-msg';
+  } else if (phase === 'available' && available) {
+    els.updateStatusMsg.textContent = `Update available: v${available.version}`;
+    els.updateStatusMsg.className = 'update-status-msg highlight';
+  } else if (phase === 'downloading' && progress) {
+    const pct = progress.total ? Math.round((progress.received / progress.total) * 100) : null;
+    els.updateStatusMsg.textContent = pct !== null
+      ? `Downloading… ${pct}% (${formatBytes(progress.received)} / ${formatBytes(progress.total)})`
+      : `Downloading… ${formatBytes(progress.received)}`;
+    els.updateStatusMsg.className = 'update-status-msg';
+  } else {
+    els.updateStatusMsg.textContent = '';
+    els.updateStatusMsg.className = 'update-status-msg';
+  }
+
+  els.updateCheckBtn.disabled = phase === 'checking' || phase === 'downloading'
+    || phase === 'verifying' || phase === 'staging' || phase === 'installing';
+  els.updateCheckBtn.textContent = phase === 'checking' ? 'Checking…' : 'Check for updates';
+
+  // Bubble badge — only when an update is available, ready, or installing.
+  const showBadge = phase === 'available' || phase === 'downloading'
+    || phase === 'verifying' || phase === 'staging' || phase === 'installing';
+  els.updateBadge.hidden = !showBadge;
+
+  // In-panel banner.
+  if (phase === 'available' && available) {
+    els.updateBanner.hidden = false;
+    els.updateBanner.className = 'update-banner available';
+    els.updateBanner.innerHTML = `
+      <div class="update-banner-text">
+        <strong>Update available — v${available.version}</strong>
+        <div class="update-banner-sub">Click "Update now" to download and install. Apollo Dock will restart.</div>
+      </div>
+      <div class="update-banner-actions">
+        <button class="btn-primary" id="updateInstallBtn">Update now</button>
+        <button class="btn-ghost" id="updateLaterBtn">Later</button>
+      </div>
+    `;
+    document.getElementById('updateInstallBtn').addEventListener('click', () => api.updater.install());
+    document.getElementById('updateLaterBtn').addEventListener('click', () => { els.updateBanner.hidden = true; });
+  } else if (phase === 'downloading' || phase === 'verifying' || phase === 'staging' || phase === 'installing') {
+    els.updateBanner.hidden = false;
+    els.updateBanner.className = 'update-banner progress';
+    const label =
+      phase === 'downloading' ? els.updateStatusMsg.textContent || 'Downloading…' :
+      phase === 'verifying'   ? 'Verifying download…' :
+      phase === 'staging'     ? 'Preparing update…' :
+                                'Installing — Apollo Dock will restart.';
+    els.updateBanner.innerHTML = `<div class="update-banner-text">${label}</div>`;
+  } else if (phase === 'error' && error) {
+    els.updateBanner.hidden = false;
+    els.updateBanner.className = 'update-banner error';
+    els.updateBanner.innerHTML = `
+      <div class="update-banner-text">
+        <strong>Update failed</strong>
+        <div class="update-banner-sub">${error}</div>
+      </div>
+      <div class="update-banner-actions">
+        <button class="btn-ghost" id="updateDismissBtn">Dismiss</button>
+      </div>
+    `;
+    document.getElementById('updateDismissBtn').addEventListener('click', () => { els.updateBanner.hidden = true; });
+  } else {
+    els.updateBanner.hidden = true;
+  }
+}
+
+els.updateCheckBtn.addEventListener('click', () => api.updater.check());
+
 async function init() {
   state = await api.getSettings();
   registry = await api.getRegistry();
@@ -204,6 +301,10 @@ async function init() {
   els.opacitySlider.value = Math.round(state.opacity * 100);
   els.opacityValue.textContent = `${els.opacitySlider.value}%`;
   renderTools();
+
+  appVersion = await api.getVersion();
+  api.updater.onStateChanged(renderUpdate);
+  renderUpdate(await api.updater.getState());
 }
 
 init();

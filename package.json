@@ -36,6 +36,7 @@
       "category": "public.app-category.productivity",
       "target": [
         { "target": "dmg", "arch": ["x64", "arm64"] },
+        { "target": "zip", "arch": ["x64", "arm64"] },
         { "target": "dir", "arch": ["x64", "arm64"] }
       ],
       "icon": "assets/Apollo Dock logo.png",
