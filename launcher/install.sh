@@ -66,8 +66,14 @@ bold "==> Installing npm dependencies (this can take a minute)…"
 npm install
 
 # 4. Build (electron-builder) ---------------------------------------------
+# Use `pack` (electron-builder --dir) here, not the full `build` — this
+# produces only the .app bundle the installer needs to copy. The full
+# `build` target also creates DMG and ZIP artifacts; those are only useful
+# for publishing releases and the DMG step is flaky on recent macOS
+# versions because of a known hdiutil "No such file or directory" bug.
+# Testers do not need release artifacts, so we skip them entirely here.
 bold "==> Packaging Apollo Dock with electron-builder…"
-npm run build
+npm run pack
 
 # 5. Install .app into ~/Applications -------------------------------------
 APP_NAME="Apollo Dock.app"
