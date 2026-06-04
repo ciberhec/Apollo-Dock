@@ -99,6 +99,14 @@ function fetchLatestRelease() {
     });
     let body = '';
     req.on('response', (res) => {
+      // GitHub returns 404 from /releases/latest when the repo has zero
+      // published (non-draft, non-prerelease) releases. Treat that as "no
+      // release available yet" — it is not an error condition.
+      if (res.statusCode === 404) {
+        res.on('data', () => {});
+        res.on('end', () => resolve(null));
+        return;
+      }
       if (res.statusCode !== 200) {
         reject(new Error(`GitHub API responded ${res.statusCode}`));
         res.on('data', () => {});
@@ -155,6 +163,10 @@ async function checkForUpdate({ manual = false } = {}) {
   setState({ phase: 'checking', error: null, message: 'Checking for updates…' });
   try {
     const release = await fetchLatestRelease();
+    if (!release) {
+      setState({ phase: 'idle', available: null, message: manual ? 'No releases have been published yet.' : null });
+      return currentState;
+    }
     const latest = parseVersion(release.tag_name);
     const current = parseVersion(app.getVersion());
     if (!latest || !current) {
