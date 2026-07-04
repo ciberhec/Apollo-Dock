@@ -1,6 +1,6 @@
 {
   "name": "apollo-dock",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Scalable macOS desktop tool launcher for Apollo.io Product Advocate / Technical Support team",
   "main": "src/main.js",
   "author": "Apollo.io Product Advocate Team",
@@ -18,7 +18,8 @@
   },
   "devDependencies": {
     "electron": "^31.3.0",
-    "electron-builder": "^24.13.3"
+    "electron-builder": "^24.13.3",
+    "playwright-core": "^1.61.1"
   },
   "build": {
     "appId": "com.apolloio.apollodock",
@@ -35,9 +36,27 @@
     "mac": {
       "category": "public.app-category.productivity",
       "target": [
-        { "target": "dmg", "arch": ["x64", "arm64"] },
-        { "target": "zip", "arch": ["x64", "arm64"] },
-        { "target": "dir", "arch": ["x64", "arm64"] }
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        },
+        {
+          "target": "dir",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
       ],
       "icon": "assets/Apollo Dock logo.png",
       "hardenedRuntime": false,
