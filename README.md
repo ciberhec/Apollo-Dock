@@ -1,77 +1,68 @@
 # Apollo Dock
 
-Apollo Dock is a scalable macOS desktop tool launcher built for the Apollo.io Product Advocate / Technical Support team. It runs as a floating, always-on-top bubble (or as an edge-anchored sidebar) and serves as a single entry point for internal support utilities. The first bundled tool is **Domain Agent**, a DNS authentication and email-deliverability checker that returns customer-ready remediation guidance without making the agent bounce between MXToolbox, GlockApps, and provider docs.
+A floating macOS desktop launcher for the Apollo.io Product Advocate & Technical Support team. Always visible on top of any app, it gives you instant access to internal support tools without leaving your workflow.
 
-## Prerequisites
-
-- macOS (Apple Silicon or Intel)
-- [Homebrew](https://brew.sh) — the installer will offer to install it if missing
-- Node.js ≥ 18 — the installer will install it via Homebrew if missing
+---
 
 ## Installation
 
-From the project root, run the one-shot installer:
+1. Go to the [latest release](https://github.com/ciberhec/Apollo-Dock/releases/latest)
+2. Download the file for your Mac:
+   - **Apple Silicon (M1/M2/M3/M4):** `Apollo Dock-x.x.x-arm64-mac.zip`
+   - **Intel:** `Apollo Dock-x.x.x-mac.zip`
+3. Unzip and drag **Apollo Dock.app** to your Applications folder
+4. Open it from Spotlight (`⌘ Space → "Apollo Dock"`) or from Applications
 
-```bash
-bash launcher/install.sh
-```
+> **First launch:** macOS may show a security prompt since the app is not distributed through the App Store. Go to **System Settings → Privacy & Security** and click **Open Anyway**.
 
-The script will: check for Homebrew (install if missing) → check for Node ≥ 18 (install if missing) → `npm install` → package the Electron app with `electron-builder` → move the resulting `Apollo Dock.app` into `/Applications`.
+---
 
-Then launch it from Spotlight (`⌘ + Space → "Apollo Dock"`) or from the Applications folder.
+## Interface modes
 
-## Run in development mode
+Apollo Dock runs in two modes, switchable from Settings:
 
-```bash
-npm install
-npm run dev
-```
+| Mode | Description |
+|---|---|
+| **Bubble** | A small floating circle you can drag anywhere on screen. Click it to expand the tool panel. |
+| **Sidebar** | An edge-anchored panel always visible on the side of your screen. |
 
-This boots Electron without packaging. The tray icon appears in the macOS menu bar; right-click for **Open / Settings / Quit**.
+---
 
-## Adding a new tool
+## Tools
 
-Apollo Dock is built so that adding a new tool requires zero changes to the dock core.
+### 🌐 Domain Agent
 
-1. Create a folder under `src/tools/<your-tool>/` containing at least `index.html`. Anything else (CSS, renderer scripts, Node helpers) is up to the tool.
-2. Add an entry to `config/tools-registry.json`:
+Checks a domain's email authentication setup (SPF, DKIM, DMARC) and blacklist status, and generates a customer-ready reply you can send directly.
 
-```json
-{
-  "tools": [
-    {
-      "id": "your-tool",
-      "name": "Your Tool",
-      "icon": "🛠️",
-      "description": "Short description",
-      "entry": "tools/your-tool/index.html"
-    }
-  ]
-}
-```
+**How to use:**
+1. Click **Domain Agent** from the dock
+2. Type the customer's domain (e.g. `company.com`) and click **Run Analysis**
+3. Review the **Status Summary** — each check shows PASS or FAIL with the raw DNS record
+4. Read the **Step-by-step Fix Guide** for any failures — it includes provider-specific instructions
+5. Copy the **Customer-Ready Message** to your clipboard, or edit it directly before sending
 
-3. Restart Apollo Dock — the new tool appears automatically in both the bubble panel and the sidebar.
+**Subdomain support:** If you enter a subdomain (e.g. `mail.company.com`), Domain Agent also checks the root domain and flags any differences between the two.
 
-If your tool needs Node-level capabilities (DNS, filesystem, network), register an `ipcMain.handle(...)` channel in `src/main.js` and expose it via `src/preload.js`, mirroring how `domain-agent:analyze` is wired up. The renderer stays sandboxed.
+---
 
-## Configuring API keys (placeholder)
+## Settings
 
-Apollo Dock will eventually integrate with external services. None of these are active yet; the scaffolding is in place so they can be turned on without re-architecting.
+Open Settings by clicking the ⚙️ icon in the dock panel.
 
-Create a `.env` file at the project root (already in `.gitignore`):
+| Setting | Description |
+|---|---|
+| **Display Mode** | Switch between Bubble and Sidebar |
+| **Opacity** | Adjust the transparency of the dock (0–100%) |
+| **Theme** | Dark or Light |
+| **Check for updates** | Manually check for a new version. If an update is available, you can download and install it in one click — Apollo Dock will restart automatically. |
 
-```bash
-# Anthropic — used by Domain Agent's "Analyze with Claude" button
-# See src/tools/domain-agent/core/ai-integration.js
-ANTHROPIC_API_KEY=
+---
 
-# Notion — used by Domain Agent's future "Save to Notion" button
-# See NOTION_INTEGRATION.md
-NOTION_TOKEN=
-NOTION_DOMAIN_DB_ID=
-```
+## Updates
 
-When a key is present at launch, the corresponding UI affordance (currently disabled) will enable itself.
+Apollo Dock checks for updates automatically every 6 hours. When a new version is available, you'll see a notification in the Settings panel. Click **Install update** and the app will download, verify, and relaunch itself — no manual download needed.
+
+---
 
 ## License
 
