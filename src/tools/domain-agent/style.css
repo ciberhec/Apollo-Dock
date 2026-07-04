@@ -283,6 +283,13 @@ body { padding: 24px 32px 48px; overflow-y: auto; }
   word-break: break-word;
   color: var(--fg);
   line-height: 1.55;
+  outline: none;
+  caret-color: var(--fg);
+}
+.copyable:focus {
+  border-radius: 6px;
+  outline: 2px solid var(--accent, #6366f1);
+  outline-offset: 2px;
 }
 
 .subdomain-banner {
