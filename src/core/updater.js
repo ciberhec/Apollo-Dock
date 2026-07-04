@@ -144,9 +144,14 @@ function parseSha256FromBody(body) {
 
 function pickMacZipAsset(release) {
   if (!release || !Array.isArray(release.assets)) return null;
-  return release.assets.find((a) =>
+  const isArm = process.arch === 'arm64';
+  const zips = release.assets.filter((a) =>
     /\.zip$/i.test(a.name) && /(mac|darwin)/i.test(a.name)
-  ) || null;
+  );
+  if (isArm) {
+    return zips.find((a) => /arm64/i.test(a.name)) || zips[0] || null;
+  }
+  return zips.find((a) => !/arm64/i.test(a.name)) || zips[0] || null;
 }
 
 // -----------------------------------------------------------------------------
