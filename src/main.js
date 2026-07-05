@@ -50,16 +50,25 @@ const toolWindows = new Map();
 let settings = { ...DEFAULT_SETTINGS };
 let menuOpen = false;
 let preMenuPosition = null;
+let currentDisplayScaleFactor = 2;
 
 function updateClickThrough() {
   if (!dockWindow) return;
   dockWindow.setIgnoreMouseEvents(false);
 }
 
+function closedBubbleSize(scaleFactor) {
+  // On Retina (scaleFactor >= 2), 88 logical px = 176 physical px — enough for
+  // macOS Sequoia's window backing to stay invisible. On 1x displays we need to
+  // scale up so the physical pixel count is equivalent.
+  return scaleFactor >= 2 ? 88 : Math.round(88 * 2 / scaleFactor);
+}
+
 function getDockDimensions(mode, isMenuOpen) {
   if (mode === 'sidebar') return { width: 220, height: 560 };
   if (isMenuOpen) return { width: 356, height: 480 };
-  return { width: 88, height: 88 };
+  const s = closedBubbleSize(currentDisplayScaleFactor);
+  return { width: s, height: s };
 }
 
 function clampToWorkArea(x, y, width, height) {
@@ -75,6 +84,11 @@ function clampToWorkArea(x, y, width, height) {
 }
 
 function createDockWindow() {
+  const initDisplay = settings.position
+    ? screen.getDisplayNearestPoint({ x: settings.position.x, y: settings.position.y })
+    : screen.getPrimaryDisplay();
+  currentDisplayScaleFactor = initDisplay.scaleFactor || 2;
+
   const { width, height } = getDockDimensions(settings.mode, menuOpen);
   const display = screen.getPrimaryDisplay().workAreaSize;
 
@@ -266,6 +280,18 @@ ipcMain.on('dock:drag-by', (_evt, delta) => {
   if (preMenuPosition) {
     preMenuPosition.x += dx;
     preMenuPosition.y += dy;
+  }
+
+  // Resize when crossing to a display with a different scaleFactor so the
+  // transparent padding stays effective on non-Retina monitors.
+  if (!menuOpen && settings.mode === 'bubble') {
+    const [nx, ny] = dockWindow.getPosition();
+    const display = screen.getDisplayNearestPoint({ x: nx, y: ny });
+    if (display.scaleFactor !== currentDisplayScaleFactor) {
+      currentDisplayScaleFactor = display.scaleFactor;
+      const { width, height } = getDockDimensions('bubble', false);
+      dockWindow.setBounds({ x: nx, y: ny, width, height });
+    }
   }
 });
 
