@@ -1,6 +1,6 @@
 {
   "name": "apollo-dock",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Scalable macOS desktop tool launcher for Apollo.io Product Advocate / Technical Support team",
   "main": "src/main.js",
   "author": "Apollo.io Product Advocate Team",
