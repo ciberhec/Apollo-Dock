@@ -324,6 +324,36 @@ body { padding: 24px 32px 48px; overflow-y: auto; }
 .root-report .section-title { color: var(--fg); }
 .root-report #rootFixGuide { margin-top: 16px; }
 
+/* ── Domain Age info icon + tooltip ── */
+.age-info-icon {
+  position: relative;
+  font-size: 13px;
+  cursor: default;
+  line-height: 1;
+}
+
+.age-sources-tooltip {
+  display: none;
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  background: var(--bg-elev);
+  border: 1px solid var(--border-soft);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 11px;
+  color: var(--fg-dim);
+  white-space: nowrap;
+  z-index: 10;
+  pointer-events: none;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+}
+
+.age-info-icon:hover .age-sources-tooltip,
+.age-info-icon:focus .age-sources-tooltip {
+  display: block;
+}
+
 .spinner {
   display: inline-block;
   width: 14px;

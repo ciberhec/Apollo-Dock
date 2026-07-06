@@ -18,6 +18,59 @@ const els = {
 
 const ICONS = { pass: '✅', warn: '⚠️', fail: '❌', info: 'ℹ️' };
 
+const AGE_CARD_ID = 'ageCard';
+
+const AGE_CONFIG = {
+  new:         { status: 'fail',  pill: 'NEW',         summary: 'Full warm-up required',       detail: 'Domain is less than 6 months old. Do not send bulk email without a warm-up plan.' },
+  young:       { status: 'warn',  pill: 'YOUNG',       summary: 'Warm-up recommended',          detail: 'Domain is between 6–12 months old. Warm-up is recommended before high-volume sending.' },
+  established: { status: 'pass',  pill: 'ESTABLISHED', summary: 'Ready to send',                detail: 'Domain is over a year old. No warm-up concerns.' },
+  unknown:     { status: 'info',  pill: 'UNKNOWN',     summary: 'Age could not be determined',  detail: 'No public records found. Domain may have full privacy protection or no web presence.' },
+};
+
+function injectAgeCardSpinner() {
+  const existing = document.getElementById(AGE_CARD_ID);
+  if (existing) existing.remove();
+  const card = document.createElement('div');
+  card.id = AGE_CARD_ID;
+  card.className = 'summary-card info';
+  card.innerHTML = `
+    <div class="summary-head">
+      <span class="summary-key">Domain Age</span>
+      <span class="status-pill info"><span class="spinner"></span></span>
+    </div>
+    <div class="summary-summary" style="color:var(--fg-dim)">Checking age sources…</div>
+  `;
+  els.summaryGrid.appendChild(card);
+}
+
+function renderAgeCard(result) {
+  const card = document.getElementById(AGE_CARD_ID);
+  if (!card) return;
+  const cfg = AGE_CONFIG[result.bucket] || AGE_CONFIG.unknown;
+  const ageLabel = result.ageText ? `Domain active for at least ${result.ageText}.` : '';
+  const sourcesHtml = result.sources.length
+    ? result.sources.join(' · ')
+    : 'No sources returned data';
+
+  card.className = `summary-card ${cfg.status}`;
+  card.innerHTML = `
+    <div class="summary-head">
+      <span class="summary-key">Domain Age</span>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span class="status-pill ${cfg.status}">${cfg.pill}</span>
+        <span class="age-info-icon" tabindex="0" title="Sources used">ℹ️
+          <span class="age-sources-tooltip">${escapeHtml(sourcesHtml)}</span>
+        </span>
+      </div>
+    </div>
+    <div class="summary-summary">${escapeHtml(cfg.summary)}</div>
+    <div class="summary-details">
+      <p>${escapeHtml(cfg.detail)}</p>
+      ${ageLabel ? `<p>${escapeHtml(ageLabel)}</p>` : ''}
+    </div>
+  `;
+}
+
 function setStatus(html, isError = false) {
   els.status.innerHTML = html;
   els.status.classList.toggle('hidden', !html);
@@ -209,6 +262,12 @@ async function runAnalysis() {
   renderRootSection(res.rootReport);
   els.customerMessage.textContent = buildCustomerMessage(res.report);
   els.report.classList.remove('hidden');
+
+  // Domain age — non-blocking, updates the card when sources respond
+  injectAgeCardSpinner();
+  window.domainAge.lookup(res.report.domain).then(renderAgeCard).catch(() => {
+    renderAgeCard({ bucket: 'unknown', ageText: null, sources: [], confidence: 0 });
+  });
 }
 
 els.runBtn.addEventListener('click', runAnalysis);

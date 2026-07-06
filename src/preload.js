@@ -28,3 +28,7 @@ contextBridge.exposeInMainWorld('apolloDock', {
 contextBridge.exposeInMainWorld('domainAgent', {
   analyze: (domain) => ipcRenderer.invoke('domain-agent:analyze', domain)
 });
+
+contextBridge.exposeInMainWorld('domainAge', {
+  lookup: (domain) => ipcRenderer.invoke('domain-age:lookup', domain)
+});

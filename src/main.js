@@ -3,9 +3,10 @@ const path = require('path');
 const fs = require('fs');
 
 const dnsLookup = require('./tools/domain-agent/core/dns-lookup');
-const scraper = require('./tools/domain-agent/core/scraper');
-const analyzer = require('./tools/domain-agent/core/analyzer');
-const updater = require('./core/updater');
+const scraper   = require('./tools/domain-agent/core/scraper');
+const analyzer  = require('./tools/domain-agent/core/analyzer');
+const domainAge = require('./tools/domain-agent/core/domain-age');
+const updater   = require('./core/updater');
 
 if (process.platform === 'darwin') app.setActivationPolicy('regular');
 
@@ -311,6 +312,8 @@ ipcMain.handle('updater:get-state', () => updater.getState());
 ipcMain.handle('updater:check', () => updater.checkForUpdate({ manual: true }));
 ipcMain.handle('updater:install', () => updater.installUpdate());
 ipcMain.handle('app:get-version', () => app.getVersion());
+
+ipcMain.handle('domain-age:lookup', (_evt, domain) => domainAge.lookupDomainAge(String(domain || '').trim()));
 
 ipcMain.handle('domain-agent:analyze', async (_evt, rawDomain) => {
   const domain = String(rawDomain || '').trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, '');
