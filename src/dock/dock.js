@@ -89,11 +89,13 @@ function pushClickThroughState() {
 async function openBubbleMenu() {
   await api.menuShown();
   els.bubblePanel.hidden = false;
+  els.bubbleCore.classList.add('panel-open');
 }
 
 function closeBubbleMenu() {
   if (els.bubblePanel.hidden) return;
   els.bubblePanel.hidden = true;
+  els.bubbleCore.classList.remove('panel-open');
   pushClickThroughState();
 }
 

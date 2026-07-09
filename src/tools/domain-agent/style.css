@@ -1,9 +1,11 @@
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap');
+
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 :root {
-  --bg: #000000;
-  --bg-elev: #111111;
-  --bg-soft: #111111;
+  --bg: #0D0D0D;
+  --bg-elev: #1A1A1A;
+  --bg-soft: #242424;
   --fg: #FFD94D;
   --fg-dim: rgba(255, 217, 77, 0.7);
   --accent: #FFD94D;
@@ -14,7 +16,7 @@
   --border-soft: rgba(255, 217, 77, 0.35);
   --button-bg: #FFD94D;
   --button-fg: #000000;
-  --pass: #FFD94D;
+  --pass: #E8FF00;
   --warn: #FFA500;
   --fail: #FF4444;
   --info: rgba(255, 217, 77, 0.7);
@@ -24,7 +26,7 @@ html, body {
   height: 100%;
   background: var(--bg);
   color: var(--fg);
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+  font-family: "Manrope", -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
   font-size: 14px;
   line-height: 1.5;
 }
@@ -174,7 +176,7 @@ body { padding: 24px 32px 48px; overflow-y: auto; }
   border-radius: 999px;
   text-transform: uppercase;
 }
-.status-pill.pass { background: rgba(255, 217, 77, 0.15); color: var(--pass); }
+.status-pill.pass { background: rgba(232, 255, 0, 0.15); color: var(--pass); }
 .status-pill.warn { background: rgba(255, 165, 0, 0.15); color: var(--warn); }
 .status-pill.fail { background: rgba(255, 68, 68, 0.15); color: var(--fail); }
 .status-pill.info { background: rgba(255, 217, 77, 0.1); color: var(--info); }

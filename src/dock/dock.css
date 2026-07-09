@@ -1,10 +1,12 @@
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap');
+
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 html, body {
   width: 100%;
   height: 100%;
   background: transparent;
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+  font-family: "Manrope", -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
   color: var(--fg);
   overflow: hidden;
   user-select: none;
@@ -13,9 +15,9 @@ html, body {
 
 :root,
 body.theme-dark {
-  --bg: #000000;
-  --bg-elev: #111111;
-  --bg-soft: #1A1A1A;
+  --bg: #0D0D0D;
+  --bg-elev: #1A1A1A;
+  --bg-soft: #242424;
   --fg: #FFD94D;
   --fg-dim: rgba(255, 217, 77, 0.7);
   --accent: #FFD94D;
@@ -27,8 +29,8 @@ body.theme-dark {
   --button-bg: #FFD94D;
   --button-fg: #000000;
   --button-border: transparent;
-  --surface: #000000;
-  --surface-hover: #111111;
+  --surface: #1A1A1A;
+  --surface-hover: #242424;
   --danger: #FF4444;
 }
 
@@ -36,19 +38,19 @@ body.theme-light {
   --bg: #FFFFFF;
   --bg-elev: #F5F5F5;
   --bg-soft: #EAEAEA;
-  --fg: #000000;
-  --fg-dim: rgba(0, 0, 0, 0.55);
-  --accent: #FFD94D;
-  --accent-hover: #E6C342;
-  --accent-active: #D4B23A;
-  --accent-disabled: rgba(255, 217, 77, 0.5);
-  --border: #000000;
-  --border-soft: rgba(0, 0, 0, 0.2);
-  --button-bg: #FFD94D;
-  --button-fg: #000000;
-  --button-border: #000000;
-  --surface: #000000;
-  --surface-hover: #111111;
+  --fg: #1A1A1A;
+  --fg-dim: rgba(26, 26, 26, 0.55);
+  --accent: #C8DF00;
+  --accent-hover: #B5CA00;
+  --accent-active: #A3B800;
+  --accent-disabled: rgba(200, 223, 0, 0.4);
+  --border: #1A1A1A;
+  --border-soft: rgba(26, 26, 26, 0.2);
+  --button-bg: #1A1A1A;
+  --button-fg: #FFFFFF;
+  --button-border: #1A1A1A;
+  --surface: #F5F5F5;
+  --surface-hover: #EAEAEA;
   --danger: #CC0000;
 }
 
@@ -75,7 +77,8 @@ body.theme-light {
   outline: none;
   -webkit-tap-highlight-color: transparent;
   -webkit-app-region: no-drag;
-  transition: transform 0.15s ease, filter 0.15s ease;
+  filter: brightness(1.2);
+  transition: transform 0.15s ease, filter 0.2s ease;
 }
 
 .update-badge {
@@ -98,8 +101,9 @@ body.theme-light .update-badge { background: #E07000; border-color: #FFFFFF; }
   100% { transform: scale(1);   opacity: 1; }
 }
 
-.bubble-core:hover { filter: brightness(1.08); }
-.bubble-core:active { cursor: grabbing; transform: scale(0.95); }
+.bubble-core:hover { filter: brightness(1.4); }
+.bubble-core:active { cursor: grabbing; transform: scale(0.95); filter: brightness(1.25); }
+.bubble-core.panel-open { filter: brightness(1.4); }
 .bubble-core:focus,
 .bubble-core:focus-visible { outline: none; }
 
